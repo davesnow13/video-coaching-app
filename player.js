@@ -57,6 +57,12 @@ const toolBtns = document.querySelectorAll('.tool-btn');
 const clearBtn = document.getElementById('clearBtn');
 const colorBtns = document.querySelectorAll('.color-btn');
 
+// Annotation settings
+const lineThicknessSlider = document.getElementById('lineThickness');
+const thicknessValue = document.getElementById('thicknessValue');
+const textSizeSlider = document.getElementById('textSize');
+const textSizeValue = document.getElementById('textSizeValue');
+
 // Individual controls for Player 1
 const playPause1 = document.getElementById('playPause1');
 const prevFrame1 = document.getElementById('prevFrame1');
@@ -74,6 +80,8 @@ const timestamp2 = document.getElementById('timestamp2');
 // Drawing state
 let currentTool = null;
 let currentColor = '#2ecc71';
+let lineThickness = 5;
+let textSize = 32;
 let isDrawing = false;
 let isPanning = false;
 let startX, startY;
@@ -530,7 +538,6 @@ playPauseBtn.onclick = () => {
 prevFrameBtn.onclick = () => {
     videoPlayer1.currentTime -= 1/30;
     if (isSplitView && isSynced && videoPlayer2.src) {
-        // Maintain offset when stepping frames
         videoPlayer2.currentTime = Math.max(0, videoPlayer1.currentTime + syncTimeOffset);
     }
 };
@@ -538,7 +545,6 @@ prevFrameBtn.onclick = () => {
 nextFrameBtn.onclick = () => {
     videoPlayer1.currentTime += 1/30;
     if (isSplitView && isSynced && videoPlayer2.src) {
-        // Maintain offset when stepping frames
         const newTime = videoPlayer1.currentTime + syncTimeOffset;
         videoPlayer2.currentTime = Math.min(newTime, videoPlayer2.duration);
     }
@@ -548,13 +554,12 @@ seekBar.oninput = () => {
     const time = (seekBar.value / 100) * videoPlayer1.duration;
     videoPlayer1.currentTime = time;
     if (isSplitView && isSynced && videoPlayer2.src) {
-        // Maintain offset when scrubbing
         const newTime = videoPlayer1.currentTime + syncTimeOffset;
         videoPlayer2.currentTime = Math.max(0, Math.min(newTime, videoPlayer2.duration));
     }
 };
 
-// Speed controls - FIXED to work in all modes
+// Speed controls
 speedBtns.forEach(btn => {
     btn.onclick = () => {
         const speed = parseFloat(btn.dataset.speed);
@@ -562,7 +567,7 @@ speedBtns.forEach(btn => {
         // Always set speed for video 1
         videoPlayer1.playbackRate = speed;
         
-        // Always set speed for video 2 if it exists (regardless of sync state)
+        // Always set speed for video 2 if it exists
         if (isSplitView && videoPlayer2.src) {
             videoPlayer2.playbackRate = speed;
         }
@@ -607,6 +612,20 @@ colorBtns.forEach(btn => {
         console.log('Selected color:', currentColor);
     };
 });
+
+// Line thickness control
+lineThicknessSlider.oninput = () => {
+    lineThickness = parseInt(lineThicknessSlider.value);
+    thicknessValue.textContent = lineThickness + 'px';
+    console.log('Line thickness:', lineThickness);
+};
+
+// Text size control
+textSizeSlider.oninput = () => {
+    textSize = parseInt(textSizeSlider.value);
+    textSizeValue.textContent = textSize + 'px';
+    console.log('Text size:', textSize);
+};
 
 // Annotation tools
 toolBtns.forEach(btn => {
@@ -706,9 +725,9 @@ function handleDrawStart(e, canvasNum) {
         let clickedText = null;
         annotations.forEach((ann, index) => {
             if (ann.tool === 'text') {
-                ctx.font = '24px Arial';
+                ctx.font = (ann.size || textSize) + 'px Arial';
                 const textWidth = ctx.measureText(ann.text).width;
-                const textHeight = 24;
+                const textHeight = ann.size || textSize;
                 if (pos.x >= ann.x && pos.x <= ann.x + textWidth &&
                     pos.y >= ann.y - textHeight && pos.y <= ann.y) {
                     clickedText = index;
@@ -739,7 +758,8 @@ function handleDrawStart(e, canvasNum) {
                     x: pos.x,
                     y: pos.y,
                     text: text,
-                    color: currentColor
+                    color: currentColor,
+                    size: textSize
                 });
                 if (canvasNum === 1) {
                     annotations1 = annotations;
@@ -774,7 +794,8 @@ function handleDrawStart(e, canvasNum) {
                 p2: p2,
                 p3: p3,
                 angle: angleDeg,
-                color: currentColor
+                color: currentColor,
+                thickness: lineThickness
             });
             
             if (canvasNum === 1) {
@@ -824,7 +845,7 @@ function handleDrawMove(e, canvasNum) {
     
     ctx.strokeStyle = currentColor;
     ctx.fillStyle = currentColor;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = lineThickness;
     ctx.beginPath();
     
     if (currentTool === 'line') {
@@ -855,7 +876,8 @@ function handleDrawEnd(e, canvasNum) {
         startY,
         endX,
         endY,
-        color: currentColor
+        color: currentColor,
+        thickness: lineThickness
     });
     
     if (canvasNum === 1) {
@@ -880,7 +902,7 @@ function redrawAnnotations(canvasNum) {
     annotations.forEach(ann => {
         ctx.strokeStyle = ann.color || '#2ecc71';
         ctx.fillStyle = ann.color || '#2ecc71';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = ann.thickness || 5;
         ctx.beginPath();
         
         if (ann.tool === 'line') {
@@ -904,10 +926,11 @@ function redrawAnnotations(canvasNum) {
             ctx.arc(ann.p2.x, ann.p2.y, radius, angle1, angle2, angle2 < angle1);
             ctx.stroke();
             
-            ctx.font = 'bold 20px Arial';
+            const fontSize = ann.thickness ? ann.thickness * 4 : 20;
+            ctx.font = 'bold ' + fontSize + 'px Arial';
             ctx.fillText(Math.round(ann.angle) + '°', ann.p2.x + 40, ann.p2.y - 10);
         } else if (ann.tool === 'text') {
-            ctx.font = '24px Arial';
+            ctx.font = (ann.size || 32) + 'px Arial';
             ctx.fillText(ann.text, ann.x, ann.y);
         }
     });

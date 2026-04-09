@@ -515,7 +515,39 @@
             font-size: 13px;
             color: #999;
         }
+        .annotation-settings {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #1a1a2e;
+        }
         
+        .setting-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .setting-row span:first-child {
+            font-size: 13px;
+            color: #999;
+            min-width: 100px;
+        }
+        
+        .setting-row input[type="range"] {
+            flex: 1;
+        }
+        
+        .setting-row span:last-child {
+            font-size: 12px;
+            color: #2ecc71;
+            min-width: 40px;
+            font-weight: 600;
+        }
         .color-btn {
             width: 28px;
             height: 28px;
@@ -783,10 +815,20 @@
                         <button class="color-btn" data-color="#ffffff" style="background: #ffffff;"></button>
                         <button class="color-btn" data-color="#ffff00" style="background: #ffff00;"></button>
                     </div>
+                    
+                    <div class="annotation-settings">
+                        <div class="setting-row">
+                            <span>Line Thickness:</span>
+                            <input type="range" id="lineThickness" min="1" max="15" value="5">
+                            <span id="thicknessValue">5px</span>
+                        </div>
+                        <div class="setting-row">
+                            <span>Text Size:</span>
+                            <input type="range" id="textSize" min="12" max="72" value="32">
+                            <span id="textSizeValue">32px</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
     <script>
         function toggleSidebar() {
