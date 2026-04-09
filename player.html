@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Video Player - Coach Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: #16213e;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            color: #667eea;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .header a, .header button {
+            color: #fff;
+            text-decoration: none;
+            padding: 6px 12px;
+            background: #667eea;
+            border-radius: 6px;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .header button.active {
+            background: #2ecc71;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            width: 100%;
+        }
+        
+        /* Mobile-first sidebar - collapsible */
+        .sidebar {
+            background: #16213e;
+            padding: 15px;
+            border-bottom: 1px solid #0f1623;
+        }
+        
+        .sidebar h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #667eea;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar h2::after {
+            content: '▼';
+            font-size: 12px;
+        }
+        
+        .sidebar.collapsed h2::after {
+            content: '▶';
+        }
+        
+        /* Quick Upload Widget */
+        .quick-upload {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #0f1623;
+            border-radius: 8px;
+        }
+        
+        .upload-btn {
+            width: 100%;
+            padding: 10px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .upload-btn:hover {
+            background: #27ae60;
+        }
+        
+        .upload-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .upload-progress {
+            margin-top: 10px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #1a1a2e;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #2ecc71;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        #uploadStatus {
+            font-size: 11px;
+            color: #999;
+        }
+        
+        .video-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .sidebar.collapsed .video-list {
+            display: none;
+        }
+        
+        .video-item {
+            padding: 10px;
+            margin-bottom: 6px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            word-break: break-all;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .video-item:hover, .video-item:active {
+            background: #667eea;
+        }
+        
+        .video-item.active {
+            background: #667eea;
+        }
+        
+        .video-item.selected-1 {
+            border: 2px solid #2ecc71;
+        }
+        
+        .video-item.selected-2 {
+            border: 2px solid #3498db;
+        }
+        
+        .video-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+        
+        .video-item-actions {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .video-item .selection-badge {
+            background: #2ecc71;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .video-item.selected-2 .selection-badge {
+            background: #3498db;
+        }
+        
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .video-item:hover .delete-btn {
+            opacity: 1;
+        }
+        
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        
+        .split-mode-info {
+            background: #0f1623;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .main-content {
+            padding: 15px;
+            width: 100%;
+        }
+        
+        /* Player layouts */
+        .player-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .player-container.split-view {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .player-wrapper {
+            background: #000;
+            border-radius: 10px;
+            overflow: auto;
+            width: 100%;
+            max-height: 60vh;
+            touch-action: pan-x pan-y;
+        }
+        
+        .player-container.split-view .player-wrapper {
+            max-height: 45vh;
+        }
+        
+        .video-label {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #2ecc71;
+            background: #0f1623;
+            margin-bottom: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .player-wrapper:nth-child(2) .video-label {
+            color: #3498db;
+        }
+        
+        .player-area {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+            transform-origin: center center;
+        }
+        
+        .video-player {
+            display: block;
+            width: 100%;
+            max-height: 60vh;
+            object-fit: contain;
+        }
+        
+        .player-container.split-view .video-player {
+            max-height: 45vh;
+        }
+        
+        .annotation-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: crosshair;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        
+        /* Individual player controls for split view */
+        /* Individual player controls for split view */
+        .individual-controls {
+            background: rgba(0,0,0,0.9);
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        
+        .player-wrapper.show-controls .individual-controls {
+            display: flex;
+        }
+        
+        .individual-controls button {
+            padding: 5px 10px;
+            font-size: 11px;
+        }
+        
+        .individual-controls input[type="range"] {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .individual-controls .timestamp {
+            font-size: 10px;
+        }
+        
+        .controls {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .sync-indicator {
+            background: #2ecc71;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .sync-indicator.unsynced {
+            background: #e74c3c;
+        }
+        
+        button {
+            padding: 8px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+        
+        button:active {
+            background: #764ba2;
+            transform: scale(0.95);
+        }
+        
+        button.active {
+            background: #2ecc71;
+        }
+        
+        .playback-speed {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .playback-speed button {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            min-width: 80px;
+            height: 6px;
+            background: #667eea;
+            border-radius: 3px;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .timestamp {
+            font-size: 12px;
+            color: #999;
+            min-width: 80px;
+        }
+        
+        .volume-control {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .volume-control input[type="range"] {
+            width: 80px;
+            flex: none;
+        }
+        
+        .zoom-control {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .zoom-control input[type="range"] {
+            flex: 1;
+        }
+        
+        .zoom-control span {
+            font-size: 12px;
+            min-width: 45px;
+        }
+        
+        .tools {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .tools h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #667eea;
+        }
+        
+        .tool-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        
+        .tool-buttons button {
+            flex: 1;
+            min-width: 80px;
+        }
+        
+        .color-picker {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #1a1a2e;
+            flex-wrap: wrap;
+        }
+        
+        .color-picker span {
+            font-size: 13px;
+            color: #999;
+        }
+        
+        .color-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        
+        .color-btn:active {
+            transform: scale(1.1);
+        }
+        
+        .color-btn.active {
+            border-color: #fff;
+            transform: scale(1.15);
+        }
+        
+        .no-video {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .no-video p {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #667eea;
+        }
+        
+        /* Desktop layout */
+        @media (min-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .header a, .header button {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            
+            .container {
+                flex-direction: row;
+                gap: 20px;
+                padding: 20px;
+                max-width: 1600px;
+                margin: 0 auto;
+            }
+            
+            .sidebar {
+                width: 250px;
+                flex-shrink: 0;
+                border-radius: 10px;
+                border-bottom: none;
+                padding: 20px;
+                height: fit-content;
+            }
+            
+            .sidebar h2 {
+                font-size: 18px;
+                cursor: default;
+            }
+            
+            .sidebar h2::after {
+                display: none;
+            }
+            
+            .sidebar.collapsed .video-list {
+                display: block;
+            }
+            
+            .video-list {
+                max-height: none;
+            }
+            
+            .main-content {
+                flex: 1;
+                background: #16213e;
+                padding: 30px;
+                border-radius: 10px;
+            }
+            
+            .player-container.split-view {
+                flex-direction: row;
+            }
+            
+            .player-wrapper {
+                max-height: 70vh;
+            }
+            
+            .player-container.split-view .player-wrapper {
+                max-height: 70vh;
+                width: 50%;
+            }
+            
+            .video-player {
+                max-height: 70vh;
+            }
+            
+            .player-container.split-view .video-player {
+                max-height: 70vh;
+            }
+            
+            button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            .playback-speed button {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            .control-row {
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .timestamp {
+                font-size: 14px;
+                min-width: 100px;
+            }
+            
+            .color-btn {
+                width: 32px;
+                height: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎿 Video Analysis</h1>
+        <div class="header-buttons">
+    <button id="singleViewBtn" class="active">Single View</button>
+    <button id="splitViewBtn">Split View</button>
+</div>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <h2 onclick="toggleSidebar()">Videos</h2>
+            
+            <!-- Quick Upload -->
+            <div class="quick-upload">
+                <input type="file" id="quickUploadInput" accept="video/*" style="display: none;">
+                <button id="quickUploadBtn" class="upload-btn">📤 Upload Video</button>
+                <div id="uploadProgress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <span id="uploadStatus">Uploading...</span>
+                </div>
+            </div>
+            
+            <div id="splitModeInfo" class="split-mode-info" style="display: none;">
+                Select 2 videos to compare
+            </div>
+            <div id="loadingVideos" class="loading">Loading...</div>
+            <ul class="video-list" id="videoList"></ul>
+        </div>
+        
+        <div class="main-content">
+            <div id="noVideoMessage" class="no-video">
+                <p>Select a video from the sidebar to start analyzing</p>
+            </div>
+            
+            <div id="playerSection" style="display: none;">
+                <div class="player-container" id="playerContainer">
+                    <!-- Player 1 -->
+                    <div class="player-wrapper" id="playerWrapper1">
+                        <div class="video-label" id="videoLabel1">Video 1</div>
+                        <div class="player-area" id="playerArea1">
+                            <video class="video-player" id="videoPlayer1"></video>
+                            <canvas class="annotation-canvas" id="annotationCanvas1"></canvas>
+                        </div>
+                        <!-- Individual controls for Player 1 (shown when unsynced) -->
+                        <div class="individual-controls" id="individualControls1">
+                            <button id="playPause1">▶</button>
+                            <button id="prevFrame1">⏮</button>
+                            <button id="nextFrame1">⏭</button>
+                            <input type="range" id="seekBar1" min="0" max="100" value="0">
+                            <span class="timestamp" id="timestamp1">0:00</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Player 2 (hidden in single view) -->
+                    <div class="player-wrapper" id="playerWrapper2" style="display: none;">
+                        <div class="video-label" id="videoLabel2">Video 2</div>
+                        <div class="player-area" id="playerArea2">
+                            <video class="video-player" id="videoPlayer2"></video>
+                            <canvas class="annotation-canvas" id="annotationCanvas2"></canvas>
+                        </div>
+                        <!-- Individual controls for Player 2 (shown when unsynced) -->
+                        <div class="individual-controls" id="individualControls2">
+                            <button id="playPause2">▶</button>
+                            <button id="prevFrame2">⏮</button>
+                            <button id="nextFrame2">⏭</button>
+                            <input type="range" id="seekBar2" min="0" max="100" value="0">
+                            <span class="timestamp" id="timestamp2">0:00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-row">
+                        <button id="playPauseBtn">▶ Play</button>
+                        <button id="prevFrameBtn">⏮ Prev</button>
+                        <button id="nextFrameBtn">Next ⏭</button>
+                        <button id="syncBtn" style="display: none;">🔗 Synced</button>
+                        <input type="range" id="seekBar" min="0" max="100" value="0">
+                        <span class="timestamp" id="timestamp">0:00 / 0:00</span>
+                    </div>
+                    
+                    <div class="control-row">
+                        <span style="font-size: 13px;">Speed:</span>
+                        <div class="playback-speed">
+                            <button class="speed-btn" data-speed="0.25">0.25x</button>
+                            <button class="speed-btn" data-speed="0.5">0.5x</button>
+                            <button class="speed-btn active" data-speed="1">1x</button>
+                            <button class="speed-btn" data-speed="1.5">1.5x</button>
+                            <button class="speed-btn" data-speed="2">2x</button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <div class="volume-control">
+                            <button id="muteBtn">🔊</button>
+                            <input type="range" id="volumeSlider" min="0" max="100" value="100">
+                        </div>
+                        
+                        <div class="zoom-control">
+                            <span>Zoom:</span>
+                            <input type="range" id="zoomSlider" min="100" max="300" value="100">
+                            <span id="zoomValue">100%</span>
+                            <button id="resetZoomBtn">Reset</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tools">
+                    <h3>Annotation Tools</h3>
+                    <div class="tool-buttons">
+                        <button id="lineBtn" class="tool-btn">📏 Line</button>
+                        <button id="arrowBtn" class="tool-btn">➡️ Arrow</button>
+                        <button id="angleBtn" class="tool-btn">📐 Angle</button>
+                        <button id="textBtn" class="tool-btn">📝 Text</button>
+                        <button id="clearBtn">🗑️ Clear</button>
+                    </div>
+                    
+                    <div class="color-picker">
+                        <span>Color:</span>
+                        <button class="color-btn active" data-color="#2ecc71" style="background: #2ecc71;"></button>
+                        <button class="color-btn" data-color="#3498db" style="background: #3498db;"></button>
+                        <button class="color-btn" data-color="#e74c3c" style="background: #e74c3c;"></button>
+                        <button class="color-btn" data-color="#f39c12" style="background: #f39c12;"></button>
+                        <button class="color-btn" data-color="#9b59b6" style="background: #9b59b6;"></button>
+                        <button class="color-btn" data-color="#ffffff" style="background: #ffffff;"></button>
+                        <button class="color-btn" data-color="#ffff00" style="background: #ffff00;"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="player.js"></script>
+</body>
+</html>
